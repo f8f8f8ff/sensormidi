@@ -5,6 +5,10 @@
 #include "sensors.h"
 #include "util.h"
 
+#define MIDI_INTERVAL_MS 50
+#define MIDI_MULTIPLIER 8
+unsigned long timer_midi = MIDI_INTERVAL_MS;
+
 void noteOn(byte channel, byte pitch, byte velocity) {
     midiEventPacket_t noteOn = {0x09, 0x90 | channel, pitch, velocity};
     MidiUSB.sendMIDI(noteOn);
@@ -20,11 +24,7 @@ void controlChange(byte channel, byte control, byte value) {
     MidiUSB.sendMIDI(event);
 }
 
-#define MIDI_INTERVAL 50
-#define MIDI_MULTIPLIER 8
-unsigned long timer_midi = MIDI_INTERVAL;
-
-class ramp {
+class ramp_ease_t {
    public:
     unsigned int set_point = 0;
     unsigned int val = 0;
@@ -33,12 +33,15 @@ class ramp {
 
     void set(int v);
     int get();
-    ramp(byte rate_up = MIDI_MULTIPLIER, byte rate_down = MIDI_MULTIPLIER)
+    void print_rate();
+    void print();
+    ramp_ease_t(byte rate_up = MIDI_MULTIPLIER,
+                byte rate_down = MIDI_MULTIPLIER)
         : rate_up(rate_up), rate_down(rate_down) {}
 };
 
-void ramp::set(int v) { set_point = v * MIDI_MULTIPLIER; }
-int ramp::get() {
+void ramp_ease_t::set(int v) { set_point = v * MIDI_MULTIPLIER; }
+int ramp_ease_t::get() {
     int diff = set_point - val;
     if (diff == 0) return val / MIDI_MULTIPLIER;
     if (diff > 0) {
@@ -59,33 +62,79 @@ int ramp::get() {
     return val / MIDI_MULTIPLIER;
 }
 
-class midi_mixer {
+void ramp_ease_t::print_rate() {
+    Serial.print("up ");
+    Serial.print(rate_up);
+    Serial.print(" down ");
+    Serial.print(rate_down);
+    Serial.print("\n");
+}
+
+void ramp_ease_t::print() {
+    Serial.print(F("setpt "));
+    Serial.print(set_point);
+    Serial.print(F(" value "));
+    Serial.print(val);
+    Serial.print(" ");
+    print_rate();
+}
+
+class midi_mixer_t {
    private:
     int map_sensor_midi(int v, unsigned int min, unsigned int max);
 
    public:
-    ramp ramps[SENSORS_MAX];
+    ramp_ease_t ramps[SENSORS_MAX];
     unsigned int sensor_min[SENSORS_MAX];
     unsigned int sensor_max[SENSORS_MAX];
     void set_range(uint8_t n, unsigned int min, unsigned int max);
-    void send_values_simple(sensor_values& values, byte channel);
+    void print_range(uint8_t n);
+    void print_ease(uint8_t n);
+    void set_ease_rate(uint8_t n, byte rate_up, byte rate_down);
+    void send_values_simple(sensor_values_t& values, byte channel);
+    void touch_cc(byte cc);
     void send_value(byte channel, byte cc, byte value);
     void flush();
-    midi_mixer() {
+    void print();
+    midi_mixer_t() {
         for (int i = 0; i < SENSORS_MAX; i++) {
             set_range(i, 0, 300);
         }
     }
 };
-midi_mixer midi;
+midi_mixer_t midi_mixer;
 
-void midi_mixer::set_range(uint8_t n, unsigned int min, unsigned int max) {
+void midi_mixer_t::set_range(uint8_t n, unsigned int min, unsigned int max) {
     if (n > SENSORS_MAX) return;
     sensor_min[n] = min;
     sensor_max[n] = max;
 }
 
-void midi_mixer::send_values_simple(sensor_values& values, byte channel) {
+void midi_mixer_t::print_range(uint8_t n) {
+    if (n > SENSORS_MAX) return;
+    Serial.print(F("range "));
+    Serial.print(n);
+    Serial.print(": ");
+    Serial.print(sensor_min[n]);
+    Serial.print(" ");
+    Serial.print(sensor_max[n]);
+    Serial.print("\n");
+}
+
+void midi_mixer_t::print_ease(uint8_t n) {
+    if (n > SENSORS_MAX) return;
+    Serial.print(F("ease "));
+    Serial.print(n);
+    ramps[n].print();
+}
+
+void midi_mixer_t::set_ease_rate(uint8_t n, byte rate_up, byte rate_down) {
+    if (n > SENSORS_MAX) return;
+    ramps[n].rate_up = rate_up;
+    ramps[n].rate_down = rate_down;
+}
+
+void midi_mixer_t::send_values_simple(sensor_values_t& values, byte channel) {
     for (int i = 0; i < values.len; i++) {
         ramps[i].set(
             map_sensor_midi(values.s[i], sensor_min[i], sensor_max[i]));
@@ -93,7 +142,7 @@ void midi_mixer::send_values_simple(sensor_values& values, byte channel) {
     }
 }
 
-void midi_mixer::send_value(byte channel, byte cc, byte value) {
+void midi_mixer_t::send_value(byte channel, byte cc, byte value) {
     /*
     Serial.print("send_value ");
     Serial.print(channel);
@@ -106,9 +155,9 @@ void midi_mixer::send_value(byte channel, byte cc, byte value) {
     controlChange(channel, cc, value);
 }
 
-void midi_mixer::flush() { MidiUSB.flush(); }
+void midi_mixer_t::flush() { MidiUSB.flush(); }
 
-int midi_mixer::map_sensor_midi(int v, unsigned int min, unsigned int max) {
+int midi_mixer_t::map_sensor_midi(int v, unsigned int min, unsigned int max) {
     int result;
     if (v <= min) {
         result = 127;
@@ -122,5 +171,22 @@ int midi_mixer::map_sensor_midi(int v, unsigned int min, unsigned int max) {
     return result;
 }
 
+void midi_mixer_t::touch_cc(byte cc) {
+    Serial.print(F("touched cc "));
+    Serial.println(cc);
+    if (cc < 0 || cc > 127) {
+        return;
+    }
+    send_value(0, cc, 0);
+    flush();
+}
+
+void midi_mixer_t::print() {
+    Serial.println(F("midi_mixer:"));
+    for (int i = 0; i < SENSORS_MAX; i++) {
+        print_range(i);
+        print_ease(i);
+    }
+}
 
 #endif
