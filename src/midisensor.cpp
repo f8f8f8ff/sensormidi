@@ -19,8 +19,8 @@ void loop() {
     cmd_read();
     if (STATE == RUNNING) {
         sensor_manager.read();
-        if (millis() >= timer_midi) {
-            timer_midi = millis() + MIDI_INTERVAL_MS;
+        if (millis() >= midi_mixer.timer) {
+            midi_mixer.timer = millis() + MIDI_INTERVAL_MS;
             sensor_values_t* values = sensor_manager.update_all_values();
             // values->print();
             midi_mixer.send_values_simple(*values, 0);

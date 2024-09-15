@@ -1,5 +1,5 @@
-#ifndef UTIL_H
-#define UTIL_H
+#ifndef __UTIL_H__
+#define __UTIL_H__
 
 #define SERIAL_DEBUG_ENABLED
 #ifdef SERIAL_DEBUG_ENABLED 
@@ -24,7 +24,7 @@
   #define DebugPrintln(...)  
 #endif
 
-void print_array(int a[], int len) {
+inline void print_array(int a[], int len) {
     Serial.print("[");
     for (int i = 0; i < len; i++) {
         Serial.print(a[i]);
@@ -34,7 +34,5 @@ void print_array(int a[], int len) {
     }
     Serial.println("]");
 }
-
-
 
 #endif
