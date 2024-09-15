@@ -30,20 +30,20 @@ class ramp_ease_t {
 
 class midi_mixer_t {
    private:
-    int map_sensor_midi(int v, unsigned int min, unsigned int max);
+    int map_sensor_midi(int v, int min, int max);
 
    public:
     unsigned long timer = MIDI_INTERVAL_MS;
     ramp_ease_t ramps[SENSORS_MAX];
-    unsigned int sensor_min[SENSORS_MAX];
-    unsigned int sensor_max[SENSORS_MAX];
+    int sensor_min[SENSORS_MAX];
+    int sensor_max[SENSORS_MAX];
 
     void send_values_simple(sensor_values_t& values, byte channel);
     void send_value(byte channel, byte cc, byte value);
     void touch_cc(byte cc);
     void flush();
 
-    void set_range(uint8_t n, unsigned int min, unsigned int max);
+    void set_range(uint8_t n, int min, int max);
     void print_range(uint8_t n);
     void set_ease_rate(uint8_t n, byte rate_up, byte rate_down);
     void print_ease(uint8_t n);

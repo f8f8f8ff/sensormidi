@@ -42,7 +42,7 @@ void ramp_ease_t::print() {
     print_rate();
 }
 
-void midi_mixer_t::set_range(uint8_t n, unsigned int min, unsigned int max) {
+void midi_mixer_t::set_range(uint8_t n, int min, int max) {
     if (n > SENSORS_MAX) return;
     sensor_min[n] = min;
     sensor_max[n] = max;
@@ -95,7 +95,7 @@ void midi_mixer_t::send_value(byte channel, byte cc, byte value) {
 
 void midi_mixer_t::flush() { MidiUSB.flush(); }
 
-int midi_mixer_t::map_sensor_midi(int v, unsigned int min, unsigned int max) {
+int midi_mixer_t::map_sensor_midi(int v, int min, int max) {
     int result;
     if (v <= min) {
         result = 127;
