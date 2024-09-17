@@ -63,6 +63,7 @@ void midi_mixer_t::print_ease(uint8_t n) {
     if (n > SENSORS_MAX) return;
     Serial.print(F("ease "));
     Serial.print(n);
+    Serial.print(" ");
     ramps[n].print();
 }
 
