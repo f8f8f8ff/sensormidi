@@ -3,7 +3,6 @@
 #include "midi.h"
 #include "sensors.h"
 #include "state.h"
-#include "util.h"
 #include "commands.h"
 
 void setup() {
